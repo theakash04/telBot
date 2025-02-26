@@ -63,7 +63,7 @@ def is_image_url_accessible(url):
 
 def get_manga_list():
     """Fetches the latest manhwas from the API."""
-    url = f"{MANGA_API}?limit=200&demographic=1&country=kr&status=1&page=1"
+    url = f"{MANGA_API}?limit=10&demographic=1&country=kr&status=1&page=1"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
         "Accept": "application/json",

@@ -1,3 +1,8 @@
-requests
-python-dotenv
-apscheduler
+annotated-types==0.7.0
+anyio==4.8.0
+APScheduler==3.11.0
+httpcore==1.0.7
+httptools==0.6.4
+httpx==0.28.1
+python-dotenv==1.0.1
+requests @ file:///home/conda/feedstock_root/build_artifacts/requests_1733217035951/work
