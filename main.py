@@ -21,11 +21,13 @@ if not all([MANGA_API, CHAT_ID, BOT_TOKEN]):
 
 def escape_markdown(text):
     """Escapes special characters for Telegram MarkdownV2."""
+    text = str(text)
     if text:
         escape_chars = r"_*[]()~`>#+-=|{}.!"
         for char in escape_chars:
             text = text.replace(char, f"\\{char}")
     return text
+
 
 
 def load_sent_titles():
@@ -46,9 +48,22 @@ def save_title(title):
     with open(JSON_FILE, "w") as file:
         json.dump(sent_titles, file, indent=4)
 
+def is_image_url_accessible(url):
+    """
+    Checks if the provided URL is accessible and points to an image.
+    """
+    try:
+        response = requests.head(url, timeout=5)
+        content_type = response.headers.get('Content-Type', '').lower()
+        if response.status_code == 200 and content_type.startswith('image/'):
+            return True
+    except requests.RequestException as e:
+        print(f"Error checking image URL: {e}")
+    return False
+
 def get_manga_list():
     """Fetches the latest manhwas from the API."""
-    url = f"{MANGA_API}?limit=10&country=kr&status=1&time=10&page=1"
+    url = f"{MANGA_API}?limit=200&demographic=1&country=kr&status=1&page=1"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
         "Accept": "application/json",
@@ -62,30 +77,58 @@ def get_manga_list():
         return None
 
 
-def send_message(title, link, rating, desc, chap, year, image):
-    """Sends a formatted manhwa post to the Telegram channel."""
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+def send_message(title, link, rating,desc, chap, year, image=None):
+    """
+    Sends a formatted manhwa post to the Telegram channel.
+    If the image URL is accessible, includes the image; otherwise, sends text only.
+    """
+    base_url = f"https://api.telegram.org/bot{BOT_TOKEN}"
+    chat_id = f"@{CHAT_ID}"
 
-    params = {
-        "chat_id": f"@{CHAT_ID}",
-        "photo": image,
-        "caption": f"📖 *{escape_markdown(str(title))}*\n\n⭐ Rating: {escape_markdown(str(rating))}\nChapter: {escape_markdown(str(chap))}\nYear: {escape_markdown(str(year))}\n\n{escape_markdown(str(desc))}",
-        "parse_mode": "MarkdownV2",
-        "reply_markup": json.dumps({
-            "inline_keyboard": [
-                [{"text": "🔗 READ NOW", "url": link}]
-            ]
-        }, ensure_ascii=False)
-    }
+
+    # Prepare the caption with escaped Markdown
+    caption = (
+        f"📖 *{escape_markdown(title)}*\n\n"
+        f"⭐ Rating: {escape_markdown(str(rating))}\n"
+        f"Chapter: {escape_markdown(str(chap))}\n"
+        f"Year: {escape_markdown(str(year))}\n\n"
+        f"{escape_markdown(desc)}"
+    )
+
+    
+    # Inline keyboard markup
+    reply_markup = json.dumps({
+        "inline_keyboard": [
+            [{"text": "🔗 READ NOW", "url": link}]
+        ]
+    }, ensure_ascii=False)
+
+    # Check if the image URL is accessible
+    if image and is_image_url_accessible(image):
+        url = f"{base_url}/sendPhoto"
+        payload = {
+            "chat_id": chat_id,
+            "photo": image,
+            "caption": caption,
+            "parse_mode": "MarkdownV2",
+            "reply_markup": reply_markup
+        }    
+    else:
+        url = f"{base_url}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": caption,
+            "parse_mode": "MarkdownV2",
+            "reply_markup": reply_markup
+        }
     try:
-        response = requests.post(url, json=params)
-        response = response.json()
-        if not response.get("ok"):
-            print(f"Telegram API Error: {response}")
+        response = requests.post(url, data=payload)
+        response_data = response.json()
+        if not response_data.get("ok"):
+            print(f"Telegram API Error: {response_data}")
             return None
-
-        message_id = response["result"]["message_id"]
-        return message_id
+        print(response_data["result"]["message_id"])
+        return response_data["result"]["message_id"]
     except Exception as err:
         print(f"Error while sending message: {err}")
         return None
@@ -93,10 +136,9 @@ def send_message(title, link, rating, desc, chap, year, image):
 
 
 
-
 def schedule_task():
     """Fetches and sends new manhwa updates at the scheduled time."""
-    print("Running schedule Task")
+
     manga_list = get_manga_list()
     if manga_list:
         for manga in manga_list:
@@ -125,11 +167,11 @@ def schedule_task():
 task = BlockingScheduler()
 task.add_job(schedule_task, "cron", hour=18, minute=30)
 
-time.sleep(10)
 schedule_task()
 
 
 # Start the scheduler to keep the script running
+print("Running schedule Task")
 task.start()
 
 
