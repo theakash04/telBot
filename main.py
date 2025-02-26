@@ -49,7 +49,6 @@ def save_title(title):
 def get_manga_list():
     """Fetches the latest manhwas from the API."""
     url = f"{MANGA_API}?limit=10&country=kr&status=1&time=10&page=1"
-    print(url)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36",
         "Accept": "application/json",
@@ -111,7 +110,6 @@ def schedule_task():
             if "md_covers" in manga and manga["md_covers"]:
                 image_url = f"{IMAGE_API}/{manga['md_covers'][0]['b2key']}" 
 
-            print(image_url)
 
             sent_titles = load_sent_titles()
             if title in sent_titles:
